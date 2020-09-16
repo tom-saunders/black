@@ -169,8 +169,10 @@ class BlackTestCase(unittest.TestCase):
     maxDiff = None
     _diffThreshold = 2 ** 20
 
-    def assertFormatEqual(self, expected: str, actual: str) -> None:
-        if actual != expected and not os.environ.get("SKIP_AST_PRINT"):
+    def assertFormatEqual(
+        self, expected: str, actual: str, *, ast_print: bool = True
+    ) -> None:
+        if actual != expected and ast_print and not os.environ.get("SKIP_AST_PRINT"):
             bdv: black.DebugVisitor[Any]
             black.out("Expected tree:", fg="green")
             try:
@@ -529,6 +531,16 @@ class BlackTestCase(unittest.TestCase):
         self.assertFormatEqual(expected, actual)
         black.assert_equivalent(source, actual)
         black.assert_stable(source, actual, mode)
+
+    @unittest.expectedFailure
+    def test_long_with_stmts(self) -> None:
+        """Tests for splitting long strings."""
+        source, expected = read_data("long_with_stmts")
+        actual = fs(source)
+
+        self.assertFormatEqual(expected, actual, ast_print=False)
+        black.assert_equivalent(source, actual)
+        black.assert_stable(source, actual, DEFAULT_MODE)
 
     def test_long_strings(self) -> None:
         """Tests for splitting long strings."""
