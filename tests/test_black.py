@@ -532,13 +532,22 @@ class BlackTestCase(unittest.TestCase):
         black.assert_equivalent(source, actual)
         black.assert_stable(source, actual, mode)
 
+    def test_short_with_stmts(self) -> None:
+        """Tests for splitting long strings."""
+        source, expected = read_data("short_with_stmts")
+        actual = fs(source)
+
+        self.assertFormatEqual(expected, actual, ast_print=True)
+        black.assert_equivalent(source, actual)
+        black.assert_stable(source, actual, DEFAULT_MODE)
+
     @unittest.expectedFailure
     def test_long_with_stmts(self) -> None:
         """Tests for splitting long strings."""
         source, expected = read_data("long_with_stmts")
         actual = fs(source)
 
-        self.assertFormatEqual(expected, actual, ast_print=False)
+        self.assertFormatEqual(expected, actual, ast_print=True)
         black.assert_equivalent(source, actual)
         black.assert_stable(source, actual, DEFAULT_MODE)
 

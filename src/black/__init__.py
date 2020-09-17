@@ -1955,6 +1955,46 @@ class LineGenerator(Visitor[Line]):
         # Finally, emit the dedent.
         yield from self.line(-1)
 
+    def visit_with_stmt(self, node: Node) -> Iterator[Line]:
+        keywords: Set[str] = set(["with"])
+        parens: Set[str] = set(["with_item"])
+        # parens: Set[str] = set()
+        normalize_invisible_parens(node, parens_after=parens)
+        prev_id = None
+        for child in node.children:
+            if child.type == token.NAME and child.value in keywords:  # type: ignore
+                index = child.remove() or 0
+                new_child = Leaf(token.NAME, "\\")
+                new_child.prefix = ""
+                node.insert_child(index, child)
+                node.insert_child(index + 1, new_child)
+                yield from self.line()
+            elif child.type == syms.with_item:
+                yield from self.line(+1)
+            elif child.type == token.COMMA:
+                index = child.remove() or 0
+                new_child = Leaf(token.NAME, "\\")
+                new_child.prefix = ""
+                node.insert_child(index, child)
+                node.insert_child(index + 1, new_child)
+            elif child.type == token.COLON:
+                this_id = id(child)
+                if this_id != prev_id:
+                    prev_id = this_id
+                    index = child.remove() or 0
+                    new_child = Leaf(token.NAME, "\\")
+                    new_child.prefix = ""
+                    node.insert_child(index, new_child)
+                    node.insert_child(index + 1, child)
+                    yield from self.line(+1)
+                else:
+                    yield from self.line(-1)
+
+            yield from self.visit(child)
+            if child.type == token.COMMA:
+                #                self.current_line.append(new_child)
+                yield from self.line(-1)
+
     def visit_stmt(
         self, node: Node, keywords: Set[str], parens: Set[str]
     ) -> Iterator[Line]:
@@ -2083,7 +2123,7 @@ class LineGenerator(Visitor[Line]):
             v, keywords={"try", "except", "else", "finally"}, parens=Ø
         )
         self.visit_except_clause = partial(v, keywords={"except"}, parens=Ø)
-        self.visit_with_stmt = partial(v, keywords={"with"}, parens=Ø)
+        # self.visit_with_stmt = partial(v, keywords={"with"}, parens=Ø)
         self.visit_funcdef = partial(v, keywords={"def"}, parens=Ø)
         self.visit_classdef = partial(v, keywords={"class"}, parens=Ø)
         self.visit_expr_stmt = partial(v, keywords=Ø, parens=ASSIGNMENTS)
